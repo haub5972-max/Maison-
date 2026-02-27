@@ -21,7 +21,9 @@ import Login from './components/Login';
 import UserProfile from './components/UserProfile';
 
 function MainApp() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAuthenticated') === 'true';
+  });
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -37,12 +39,22 @@ function MainApp() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const handleLogin = () => {
+    localStorage.setItem('isAuthenticated', 'true');
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated');
+    setIsAuthenticated(false);
+  };
+
   if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
+    return <Login onLogin={handleLogin} />;
   }
 
   if (isMobile) {
-    return <MobileCaptainApp onLogout={() => setIsAuthenticated(false)} />;
+    return <MobileCaptainApp onLogout={handleLogout} />;
   }
 
   return (
@@ -52,7 +64,7 @@ function MainApp() {
           <Sidebar 
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
-            onLogout={() => setIsAuthenticated(false)}
+            onLogout={handleLogout}
           />
           <div className="flex-1 flex flex-col min-w-0">
             <Header 
