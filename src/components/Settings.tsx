@@ -29,6 +29,7 @@ interface Employee {
   roles: {
     reception: boolean;
     kitchen: boolean;
+    server: boolean;
     manager: boolean;
   };
   lastActive?: string;
@@ -48,10 +49,10 @@ interface Area {
 }
 
 const mockEmployees: Employee[] = [
-  { id: '1', name: 'Nguyễn Văn A', email: 'a.nguyen@maisonvie.com', active: true, roles: { reception: false, kitchen: false, manager: true }, lastActive: 'Vừa xong' },
-  { id: '2', name: 'Trần Thị B', email: 'b.tran@maisonvie.com', active: true, roles: { reception: true, kitchen: false, manager: false }, lastActive: '5 phút trước' },
-  { id: '3', name: 'Lê Văn C', email: 'c.le@maisonvie.com', active: true, roles: { reception: false, kitchen: true, manager: false }, lastActive: '1 giờ trước' },
-  { id: '4', name: 'Phạm Thị D', email: 'd.pham@maisonvie.com', active: false, roles: { reception: true, kitchen: false, manager: false }, lastActive: '2 ngày trước' },
+  { id: '1', name: 'Nguyễn Văn A', email: 'a.nguyen@maisonvie.com', active: true, roles: { reception: false, kitchen: false, server: false, manager: true }, lastActive: 'Vừa xong' },
+  { id: '2', name: 'Trần Thị B', email: 'b.tran@maisonvie.com', active: true, roles: { reception: true, kitchen: false, server: true, manager: false }, lastActive: '5 phút trước' },
+  { id: '3', name: 'Lê Văn C', email: 'c.le@maisonvie.com', active: true, roles: { reception: false, kitchen: true, server: false, manager: false }, lastActive: '1 giờ trước' },
+  { id: '4', name: 'Phạm Thị D', email: 'd.pham@maisonvie.com', active: false, roles: { reception: true, kitchen: false, server: false, manager: false }, lastActive: '2 ngày trước' },
 ];
 
 const mockActivityLogs: ActivityLog[] = [
@@ -70,7 +71,7 @@ export default function Settings() {
   
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'manager' | 'reception' | 'kitchen'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'manager' | 'reception' | 'kitchen' | 'server'>('all');
 
   // User Detail Modal State
   const [userDetailModalOpen, setUserDetailModalOpen] = useState(false);
@@ -153,6 +154,7 @@ export default function Settings() {
       roles: {
         reception: newUser.role === 'reception',
         kitchen: newUser.role === 'kitchen',
+        server: newUser.role === 'server',
         manager: newUser.role === 'manager'
       }
     };
@@ -176,6 +178,7 @@ export default function Settings() {
     if (roleFilter === 'manager') matchesRole = emp.roles.manager;
     if (roleFilter === 'reception') matchesRole = emp.roles.reception;
     if (roleFilter === 'kitchen') matchesRole = emp.roles.kitchen;
+    if (roleFilter === 'server') matchesRole = emp.roles.server;
 
     return matchesSearch && matchesRole;
   });
@@ -250,6 +253,7 @@ export default function Settings() {
                 <option value="manager">Quản lý</option>
                 <option value="reception">Lễ tân</option>
                 <option value="kitchen">Bếp</option>
+                <option value="server">Phục vụ</option>
               </select>
             </div>
 
@@ -281,6 +285,7 @@ export default function Settings() {
                       {emp.roles.manager && <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Quản lý</span>}
                       {emp.roles.reception && <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Lễ tân</span>}
                       {emp.roles.kitchen && <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Bếp</span>}
+                      {emp.roles.server && <span className="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded text-[10px] font-bold">Phục vụ</span>}
                     </div>
                   </div>
                 </div>
@@ -495,6 +500,7 @@ export default function Settings() {
                 >
                   <option value="reception">Lễ tân</option>
                   <option value="kitchen">Bếp</option>
+                  <option value="server">Phục vụ</option>
                   <option value="manager">Quản lý</option>
                 </select>
               </div>
@@ -546,6 +552,10 @@ export default function Settings() {
               <label className={`flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 ${!selectedEmployee.active ? 'opacity-50 pointer-events-none' : ''}`}>
                 <span className="font-medium text-gray-700">Bếp</span>
                 <input type="checkbox" defaultChecked={selectedEmployee.roles.kitchen} className="w-6 h-6 text-teal-600 rounded focus:ring-teal-500" />
+              </label>
+              <label className={`flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 ${!selectedEmployee.active ? 'opacity-50 pointer-events-none' : ''}`}>
+                <span className="font-medium text-gray-700">Phục vụ</span>
+                <input type="checkbox" defaultChecked={selectedEmployee.roles.server} className="w-6 h-6 text-teal-600 rounded focus:ring-teal-500" />
               </label>
               <label className={`flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 ${!selectedEmployee.active ? 'opacity-50 pointer-events-none' : ''}`}>
                 <span className="font-medium text-gray-700">Quản lý</span>
@@ -638,6 +648,7 @@ export default function Settings() {
                       <option value="manager">Quản lý</option>
                       <option value="reception">Lễ tân</option>
                       <option value="kitchen">Bếp</option>
+                      <option value="server">Phục vụ</option>
                     </select>
                    <button 
                     onClick={() => setIsAddUserModalOpen(true)}
@@ -655,6 +666,7 @@ export default function Settings() {
                     <th className="px-6 py-4 text-center w-32">Kích hoạt</th>
                     <th className="px-6 py-4 text-center w-32">Lễ tân</th>
                     <th className="px-6 py-4 text-center w-32">Bếp</th>
+                    <th className="px-6 py-4 text-center w-32">Phục vụ</th>
                     <th className="px-6 py-4 text-center w-32">Quản lý</th>
                     <th className="px-6 py-4 text-center w-20"></th>
                   </tr>
@@ -689,6 +701,9 @@ export default function Settings() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <input type="checkbox" defaultChecked={emp.roles.kitchen} disabled={!emp.active} className="w-5 h-5 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer disabled:opacity-50" />
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <input type="checkbox" defaultChecked={emp.roles.server} disabled={!emp.active} className="w-5 h-5 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer disabled:opacity-50" />
                       </td>
                       <td className="px-6 py-4 text-center">
                         <input type="checkbox" defaultChecked={emp.roles.manager} disabled={!emp.active} className="w-5 h-5 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer disabled:opacity-50" />
@@ -1171,6 +1186,7 @@ export default function Settings() {
                 >
                   <option value="reception">Lễ tân</option>
                   <option value="kitchen">Bếp</option>
+                  <option value="server">Phục vụ</option>
                   <option value="manager">Quản lý</option>
                 </select>
               </div>
@@ -1221,6 +1237,7 @@ export default function Settings() {
                       {viewingEmployee.roles.manager && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">Quản lý</span>}
                       {viewingEmployee.roles.reception && <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">Lễ tân</span>}
                       {viewingEmployee.roles.kitchen && <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-bold">Bếp</span>}
+                      {viewingEmployee.roles.server && <span className="bg-teal-100 text-teal-700 px-2 py-0.5 rounded text-xs font-bold">Phục vụ</span>}
                     </div>
                   </div>
 

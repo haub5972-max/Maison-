@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { User, Clock, Info, Users, Split, LayoutTemplate, Edit, Save, Plus, Trash2, Move, X, Check } from 'lucide-react';
+import { User, Clock, Info, Users, Split, LayoutTemplate, Edit, Save, Plus, Trash2, Move, X, Check, ArrowRightLeft } from 'lucide-react';
 import OrderPad from './OrderPad';
 
 type TableStatus = 'empty' | 'occupied' | 'reserved';
@@ -73,6 +73,9 @@ export default function RestaurantMap() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem>({ category: 'table' });
 
+  // Move Table State
+  const [movingTableId, setMovingTableId] = useState<string | null>(null);
+
   // Order Pad State
   const [selectedTableForOrder, setSelectedTableForOrder] = useState<Table | VipRoom | null>(null);
 
@@ -107,6 +110,42 @@ export default function RestaurantMap() {
     }
   };
 
+  // Move Table Handler
+  const handleMoveTable = (sourceId: string, targetId: string) => {
+    const sourceTable = tables.find(t => t.id === sourceId);
+    const targetTable = tables.find(t => t.id === targetId);
+    
+    if (!sourceTable || !targetTable) return;
+
+    if (window.confirm(`Xác nhận chuyển khách từ ${sourceTable.name} sang ${targetTable.name}?`)) {
+      setTables(tables.map(t => {
+        if (t.id === targetId) {
+          return {
+            ...t,
+            status: sourceTable.status,
+            customerName: sourceTable.customerName,
+            pax: sourceTable.pax, // Keep source pax or target? Usually source group size.
+            time: sourceTable.time,
+            duration: sourceTable.duration,
+            notes: sourceTable.notes
+          };
+        }
+        if (t.id === sourceId) {
+          return {
+            ...t,
+            status: 'empty',
+            customerName: undefined,
+            time: undefined,
+            duration: undefined,
+            notes: undefined
+          };
+        }
+        return t;
+      }));
+      setMovingTableId(null);
+    }
+  };
+
   // Drag & Drop Handlers
   const handleDragStart = (e: React.DragEvent, position: number, type: 'table' | 'vip') => {
     dragItem.current = position;
@@ -121,7 +160,9 @@ export default function RestaurantMap() {
 
   const handleDragEnd = (e: React.DragEvent) => {
     e.preventDefault();
-    if (dragItem.current !== null && dragOverItem.current !== null && dragType.current) {
+    
+    // Only Handle Reordering in Edit Mode
+    if (isEditing && dragItem.current !== null && dragOverItem.current !== null && dragType.current) {
       if (dragType.current === 'table') {
         const newTables = [...tables];
         const draggedItemContent = newTables[dragItem.current];
@@ -136,6 +177,7 @@ export default function RestaurantMap() {
         setVipRoomsList(newRooms);
       }
     }
+
     dragItem.current = null;
     dragOverItem.current = null;
     dragType.current = null;
@@ -231,6 +273,23 @@ export default function RestaurantMap() {
         </button>
       </div>
 
+      {/* Moving Mode Banner */}
+      {movingTableId && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-4 animate-in slide-in-from-top-4 border-2 border-white/20">
+          <ArrowRightLeft className="w-5 h-5 animate-pulse" />
+          <div>
+            <div className="font-bold text-sm">Đang chuyển: {tables.find(t => t.id === movingTableId)?.name}</div>
+            <div className="text-xs opacity-90">Chọn một bàn trống để chuyển đến</div>
+          </div>
+          <button 
+            onClick={() => setMovingTableId(null)}
+            className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors ml-2"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Level 1: Sảnh chung */}
       <section>
         <div className="flex items-center justify-between mb-4">
@@ -279,10 +338,14 @@ export default function RestaurantMap() {
                   ${table.type === 'circle' ? 'rounded-full w-24 h-24' : 'rounded-lg w-24 h-24'}
                   ${getStatusColor(table.status)}
                   ${isEditing ? 'animate-pulse border-dashed border-gray-400' : ''}
+                  ${movingTableId === table.id ? 'ring-4 ring-blue-400 ring-offset-2 border-blue-500' : ''}
+                  ${movingTableId && table.status === 'empty' ? 'hover:ring-4 hover:ring-green-400 hover:ring-offset-2 hover:border-green-500' : ''}
                 `}
                 onClick={() => {
-                  if (!isEditing) {
+                  if (!isEditing && !movingTableId) {
                     setSelectedTableForOrder(table);
+                  } else if (movingTableId && table.status === 'empty') {
+                    handleMoveTable(movingTableId, table.id);
                   }
                 }}
               >
@@ -303,6 +366,29 @@ export default function RestaurantMap() {
                   )}
                 </div>
 
+                {/* Move Button (View Mode, Occupied/Reserved) */}
+                {!isEditing && !movingTableId && table.status !== 'empty' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMovingTableId(table.id);
+                    }}
+                    className="absolute -top-2 -right-2 p-1.5 bg-blue-600 text-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:scale-110 hover:bg-blue-700"
+                    title="Đổi bàn"
+                  >
+                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Target Selection Overlay (When moving) */}
+                {movingTableId && movingTableId !== table.id && table.status === 'empty' && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm animate-bounce">
+                      Chọn
+                    </span>
+                  </div>
+                )}
+
                 {/* Edit Mode Controls */}
                 {isEditing && (
                   <div className="absolute -top-2 -right-2 flex gap-1">
@@ -322,7 +408,7 @@ export default function RestaurantMap() {
                 )}
 
                 {/* Tooltip (Only in View Mode) */}
-                {!isEditing && (table.status === 'occupied' || table.status === 'reserved') && (
+                {!isEditing && !movingTableId && (table.status === 'occupied' || table.status === 'reserved') && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
                     <div className="font-bold text-sm mb-1">{table.customerName}</div>
                     <div className="flex items-center gap-1.5 text-gray-300 mb-1">
