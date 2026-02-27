@@ -18,7 +18,9 @@ import {
   Filter,
   Activity,
   Settings as SettingsIcon,
-  AlertTriangle
+  AlertTriangle,
+  Users,
+  LayoutTemplate
 } from 'lucide-react';
 
 interface Employee {
@@ -63,7 +65,7 @@ const mockActivityLogs: ActivityLog[] = [
 ];
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'permissions' | 'hours' | 'training' | 'operations'>('permissions');
+  const [activeTab, setActiveTab] = useState<'permissions' | 'hours' | 'training' | 'operations' | 'assignments'>('permissions');
   const [isMobile, setIsMobile] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -77,6 +79,42 @@ export default function Settings() {
   const [userDetailModalOpen, setUserDetailModalOpen] = useState(false);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   
+  // Assignments State
+  const [stations, setStations] = useState([
+    { id: '1', name: 'Station Cửa Sổ (T1)', tables: ['Bàn 1', 'Bàn 2', 'Bàn 5', 'Bàn 6'], staffIds: ['2'] },
+    { id: '2', name: 'Station Trung Tâm (T1)', tables: ['Bàn 3', 'Bàn 4', 'Bàn 7', 'Bàn 8'], staffIds: [] },
+    { id: '3', name: 'Phòng VIP 1', tables: ['VIP 1'], staffIds: ['1'] },
+  ]);
+  const [newStationName, setNewStationName] = useState('');
+  const [selectedTablesForStation, setSelectedTablesForStation] = useState<string[]>([]);
+  const [isAddStationModalOpen, setIsAddStationModalOpen] = useState(false);
+  
+  // Edit Station Tables State
+  const [editingStationId, setEditingStationId] = useState<string | null>(null);
+  const [isEditStationTablesModalOpen, setIsEditStationTablesModalOpen] = useState(false);
+
+  const handleEditStationTables = (stationId: string) => {
+    const station = stations.find(s => s.id === stationId);
+    if (station) {
+      setEditingStationId(stationId);
+      setSelectedTablesForStation(station.tables);
+      setIsEditStationTablesModalOpen(true);
+    }
+  };
+
+  const handleSaveStationTables = () => {
+    if (editingStationId) {
+      setStations(stations.map(s => 
+        s.id === editingStationId 
+          ? { ...s, tables: selectedTablesForStation } 
+          : s
+      ));
+      setIsEditStationTablesModalOpen(false);
+      setEditingStationId(null);
+      setSelectedTablesForStation([]);
+    }
+  };
+
   // Operations State
   const [areas, setAreas] = useState<Area[]>([
     { id: '1', name: 'Sảnh Tầng 1', capacity: 80 },
@@ -224,6 +262,14 @@ export default function Settings() {
             }`}
           >
             Vận hành
+          </button>
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+              activeTab === 'assignments' ? 'bg-teal-600 text-white shadow-md' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            Phân công
           </button>
         </div>
       </div>
@@ -449,6 +495,88 @@ export default function Settings() {
             </button>
           </div>
         )}
+        {/* TAB 5: ASSIGNMENTS (Mobile) */}
+        {activeTab === 'assignments' && (
+          <div className="space-y-6">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-teal-600" />
+                  Khu vực & Phân công
+                </h3>
+                <button 
+                  onClick={() => {
+                    setNewStationName('');
+                    setSelectedTablesForStation([]);
+                    setIsAddStationModalOpen(true);
+                  }}
+                  className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded font-bold border border-teal-100"
+                >
+                  + Thêm Station
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {stations.map((station) => (
+                  <div key={station.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                      <span className="font-bold text-gray-800">{station.name}</span>
+                      <button onClick={() => setStations(stations.filter(s => s.id !== station.id))} className="text-gray-400 hover:text-red-500">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1 font-medium uppercase">Bàn phụ trách</div>
+                        <div className="flex flex-wrap gap-1">
+                          {station.tables.map(t => (
+                            <span key={t} className="bg-white border border-gray-200 text-gray-600 text-xs px-2 py-1 rounded">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1 font-medium uppercase">Nhân sự</div>
+                        <div className="flex flex-wrap gap-2">
+                          {station.staffIds.map(id => {
+                            const emp = employees.find(e => e.id === id);
+                            return emp ? (
+                              <div key={id} className="flex items-center gap-1 bg-teal-50 text-teal-700 px-2 py-1 rounded-full text-xs border border-teal-100">
+                                <User className="w-3 h-3" />
+                                {emp.name}
+                                <button 
+                                  onClick={() => setStations(stations.map(s => s.id === station.id ? {...s, staffIds: s.staffIds.filter(sid => sid !== id)} : s))}
+                                  className="ml-1 hover:text-red-500"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : null;
+                          })}
+                          <select 
+                            className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded border-none focus:ring-0 cursor-pointer"
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setStations(stations.map(s => s.id === station.id ? {...s, staffIds: [...s.staffIds, e.target.value]} : s));
+                                e.target.value = '';
+                              }
+                            }}
+                          >
+                            <option value="">+ Thêm</option>
+                            {employees.filter(e => !station.staffIds.includes(e.id)).map(e => (
+                              <option key={e.id} value={e.id}>{e.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add User Modal - Rendered for both Mobile and Desktop */}
@@ -512,6 +640,143 @@ export default function Settings() {
                   className="w-full bg-teal-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold text-lg shadow-lg shadow-teal-100 hover:shadow-teal-200 transition-all"
                 >
                   Tạo tài khoản
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Station Modal */}
+      {isAddStationModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-in fade-in duration-200"
+          onClick={() => setIsAddStationModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-md bg-white rounded-2xl p-6 m-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Tạo Station Mới</h3>
+              <button onClick={() => setIsAddStationModalOpen(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tên Station / Khu vực</label>
+                <input 
+                  type="text" 
+                  value={newStationName}
+                  onChange={(e) => setNewStationName(e.target.value)}
+                  placeholder="VD: Station Cửa Sổ, Station VIP..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Chọn bàn phụ trách</label>
+                <div className="border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto grid grid-cols-3 gap-2">
+                  {['Bàn 1', 'Bàn 2', 'Bàn 3', 'Bàn 4', 'Bàn 5', 'Bàn 6', 'Bàn 7', 'Bàn 8', 'VIP 1', 'VIP 2'].map(table => (
+                    <label key={table} className={`flex items-center justify-center px-2 py-2 rounded border cursor-pointer text-sm transition-all ${selectedTablesForStation.includes(table) ? 'bg-teal-50 border-teal-500 text-teal-700 font-bold' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      <input 
+                        type="checkbox" 
+                        className="hidden"
+                        checked={selectedTablesForStation.includes(table)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTablesForStation([...selectedTablesForStation, table]);
+                          } else {
+                            setSelectedTablesForStation(selectedTablesForStation.filter(t => t !== table));
+                          }
+                        }}
+                      />
+                      {table}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  onClick={() => {
+                    if (newStationName) {
+                      setStations([
+                        ...stations, 
+                        { 
+                          id: Date.now().toString(), 
+                          name: newStationName, 
+                          tables: selectedTablesForStation, 
+                          staffIds: [] 
+                        }
+                      ]);
+                      setIsAddStationModalOpen(false);
+                      setNewStationName('');
+                      setSelectedTablesForStation([]);
+                    }
+                  }}
+                  disabled={!newStationName}
+                  className="w-full bg-teal-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold text-lg shadow-lg shadow-teal-100 hover:shadow-teal-200 transition-all"
+                >
+                  Tạo Station
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Station Tables Modal */}
+      {isEditStationTablesModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-in fade-in duration-200"
+          onClick={() => setIsEditStationTablesModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-md bg-white rounded-2xl p-6 m-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                Cập nhật bàn cho {stations.find(s => s.id === editingStationId)?.name}
+              </h3>
+              <button onClick={() => setIsEditStationTablesModalOpen(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Chọn bàn phụ trách</label>
+                <div className="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto grid grid-cols-3 gap-2">
+                  {['Bàn 1', 'Bàn 2', 'Bàn 3', 'Bàn 4', 'Bàn 5', 'Bàn 6', 'Bàn 7', 'Bàn 8', 'VIP 1', 'VIP 2'].map(table => (
+                    <label key={table} className={`flex items-center justify-center px-2 py-2 rounded border cursor-pointer text-sm transition-all ${selectedTablesForStation.includes(table) ? 'bg-teal-50 border-teal-500 text-teal-700 font-bold' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      <input 
+                        type="checkbox" 
+                        className="hidden"
+                        checked={selectedTablesForStation.includes(table)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTablesForStation([...selectedTablesForStation, table]);
+                          } else {
+                            setSelectedTablesForStation(selectedTablesForStation.filter(t => t !== table));
+                          }
+                        }}
+                      />
+                      {table}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  onClick={handleSaveStationTables}
+                  className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold text-lg shadow-lg shadow-teal-100 hover:shadow-teal-200 transition-all"
+                >
+                  Lưu thay đổi
                 </button>
               </div>
             </div>
@@ -617,12 +882,153 @@ export default function Settings() {
             <SettingsIcon className="w-4 h-4" />
             Vận hành
           </button>
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+              activeTab === 'assignments' ? 'bg-white shadow-sm text-teal-700' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Phân công
+          </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-6xl mx-auto">
           
+          {/* TAB 5: ASSIGNMENTS */}
+          {activeTab === 'assignments' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Phân công khu vực (Station)</h3>
+                  <p className="text-sm text-gray-500">Tạo các trạm phục vụ và gán nhân viên chịu trách nhiệm.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setNewStationName('');
+                    setSelectedTablesForStation([]);
+                    setIsAddStationModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-teal-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Tạo Station mới
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {stations.map((station) => (
+                  <div key={station.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+                    <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                      <h4 className="font-bold text-gray-800">{station.name}</h4>
+                      <div className="flex gap-2">
+                        <button className="text-gray-400 hover:text-teal-600">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setStations(stations.filter(s => s.id !== station.id))}
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="p-5 flex-1 flex flex-col gap-4">
+                      {/* Tables List */}
+                      <div>
+                        <div className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
+                          <LayoutTemplate className="w-3 h-3" />
+                          Bàn phụ trách
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {station.tables.map(table => (
+                            <span key={table} className="px-2.5 py-1 bg-white border border-gray-200 rounded text-xs font-medium text-gray-600 shadow-sm">
+                              {table}
+                            </span>
+                          ))}
+                          <button 
+                            onClick={() => handleEditStationTables(station.id)}
+                            className="px-2 py-1 bg-gray-50 border border-dashed border-gray-300 rounded text-xs text-gray-400 hover:text-teal-600 hover:border-teal-300 transition-colors"
+                          >
+                            + Sửa
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-gray-100"></div>
+
+                      {/* Staff Assignment */}
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          Nhân sự phụ trách
+                        </div>
+                        <div className="space-y-2">
+                          {station.staffIds.map(id => {
+                            const emp = employees.find(e => e.id === id);
+                            if (!emp) return null;
+                            return (
+                              <div key={id} className="flex items-center justify-between p-2 bg-teal-50 rounded-lg border border-teal-100 group">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-teal-200 flex items-center justify-center text-teal-700 text-xs font-bold">
+                                    {emp.name.charAt(0)}
+                                  </div>
+                                  <span className="text-sm font-medium text-teal-900">{emp.name}</span>
+                                </div>
+                                <button 
+                                  onClick={() => setStations(stations.map(s => s.id === station.id ? {...s, staffIds: s.staffIds.filter(sid => sid !== id)} : s))}
+                                  className="text-teal-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                          
+                          <div className="relative group">
+                            <select 
+                              className="w-full p-2 bg-gray-50 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-teal-400 hover:text-teal-600 cursor-pointer appearance-none focus:ring-0 focus:outline-none transition-colors"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setStations(stations.map(s => s.id === station.id ? {...s, staffIds: [...s.staffIds, e.target.value]} : s));
+                                  e.target.value = '';
+                                }
+                              }}
+                            >
+                              <option value="">+ Gán thêm nhân viên</option>
+                              {employees.filter(e => !station.staffIds.includes(e.id)).map(e => (
+                                <option key={e.id} value={e.id}>{e.name}</option>
+                              ))}
+                            </select>
+                            <Plus className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-teal-500" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add New Station Card Placeholder */}
+                <button 
+                  onClick={() => {
+                    setNewStationName('');
+                    setSelectedTablesForStation([]);
+                    setIsAddStationModalOpen(true);
+                  }}
+                  className="border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center p-8 text-gray-400 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50/50 transition-all group min-h-[300px]"
+                >
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3 group-hover:bg-teal-100 group-hover:text-teal-600 transition-colors">
+                    <Plus className="w-6 h-6" />
+                  </div>
+                  <span className="font-bold">Tạo Station mới</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: PERMISSIONS */}
           {activeTab === 'permissions' && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
